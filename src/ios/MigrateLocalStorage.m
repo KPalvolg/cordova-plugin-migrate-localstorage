@@ -1,6 +1,7 @@
 #import "MigrateLocalStorage.h"
 #import <Cordova/CDVViewController.h>
 #import <sqlite3.h>
+#import <Cordova/NSDictionary+CordovaPreferences.h>
 
 @implementation MigrateLocalStorage
 
@@ -160,7 +161,7 @@
     NSString* original;
     NSString* target;
     
-    original = [appLibraryFolder stringByAppendingPathComponent:(@"Caches/___IndexedDB/file__0")];
+    original = [appLibraryFolder stringByAppendingPathComponent:(@"Caches/___IndexedDB/v1/file__0")];
     target = [appLibraryFolder stringByAppendingPathComponent:@"WebKit"];
     
 #if TARGET_IPHONE_SIMULATOR
@@ -169,7 +170,7 @@
     target = [target stringByAppendingPathComponent:bundleIdentifier];
 #endif
     
-    target = [[target stringByAppendingPathComponent:@"WebsiteData/IndexedDB"] stringByAppendingPathComponent:(targetName)];
+    target = [[target stringByAppendingPathComponent:@"WebsiteData/IndexedDB/v1"] stringByAppendingPathComponent:(targetName)];
     
     // Copy IndexedDB directory
     if (![[NSFileManager defaultManager] fileExistsAtPath:target]) {
@@ -185,21 +186,20 @@
     CDVViewController* vController = (CDVViewController*)self.viewController;
     NSURL* mainURL = [NSURL URLWithString:vController.startPage];
     NSMutableString* targetFileName = [[NSMutableString alloc]init];
-    if([mainURL scheme] == nil) {
-        [targetFileName appendString:(@"file__0")];
+    //Get host settings from ionic-webview settings in config.xml
+    NSDictionary* settings = [self.commandDelegate settings];
+    NSString* scheme = [settings cordovaSettingForKey:@"iosScheme"];
+    NSString *host = [settings cordovaSettingForKey:@"Hostname"];
+    if(scheme == nil || [scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]  || [scheme isEqualToString:@"file"]){
+        scheme = @"ionic";
+    } 
+    if(host == nil){
+        host = @"localhost";
     }
-    else {
-        [targetFileName appendString:([mainURL scheme])];
-        [targetFileName appendString:(@"_")];
-        if(!([[mainURL host] isEqualToString:@"localhost"] || [[mainURL host] isEqualToString:@"127.0.0.1"])) {
-            return @"file__0";
-        }
-        [targetFileName appendString:([mainURL host])];
-        if([mainURL port] != nil) {
-            [targetFileName appendString:(@"_")];
-            [targetFileName appendString:([[mainURL port] stringValue])];
-        }
-    }
+    [targetFileName appendString:(scheme)];
+    [targetFileName appendString:(@"_")];
+    [targetFileName appendString:(host)];
+    [targetFileName appendString:(@"_0")];
     return [NSString stringWithString:targetFileName];
 }
 
